@@ -10,7 +10,8 @@ import {
   FaBed, 
   FaCog,
   FaUsersCog,
-  FaSignOutAlt 
+  FaSignOutAlt,
+  FaShoppingCart
 } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 import authService from '../../services/authService';
@@ -25,10 +26,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { path: '/rendez-vous', name: 'Rendez-vous', icon: FaCalendarAlt, roles: ['SUPER_ADMIN', 'ADMIN', 'MEDECIN', 'RECEPTIONNISTE'] },
     { path: '/consultations', name: 'Consultations', icon: FaStethoscope, roles: ['SUPER_ADMIN', 'ADMIN', 'MEDECIN'] },
     { path: '/produits', name: 'Médicaments', icon: FaPills, roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { path: '/pos', name: 'Point de Vente', icon: FaShoppingCart, roles: ['SUPER_ADMIN', 'ADMIN', 'CAISSIER'] },
     { path: '/factures', name: 'Factures', icon: FaFileInvoice, roles: ['SUPER_ADMIN', 'ADMIN', 'CAISSIER'] },
     { path: '/chambres', name: 'Chambres', icon: FaBed, roles: ['SUPER_ADMIN', 'ADMIN', 'RECEPTIONNISTE'] },
     { path: '/profile', name: 'Profil', icon: FaCog, roles: ['SUPER_ADMIN', 'ADMIN', 'MEDECIN', 'CAISSIER', 'RECEPTIONNISTE'] },
     { path: '/users', name: 'Utilisateurs', icon: FaUsersCog, roles: ['SUPER_ADMIN', 'ADMIN'] },
+
   ];
 
   // Filtrer les menus selon le rôle de l'utilisateur

@@ -12,6 +12,7 @@ import FacturesList from './pages/Factures/FacturesList';
 import ChambresList from './pages/Chambres/ChambresList';
 import Profile from './pages/Settings/Profile';  
 import UsersList from './pages/Users/UsersList';
+import PointDeVente from './pages/Pos/PointDeVente';
 import './index.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -48,6 +49,7 @@ function AppRoutes() {
         <Route path="chambres" element={<ChambresList />} />
         <Route path="profile" element={<Profile />} /> 
         <Route path="users" element={<UsersList />} />
+        <Route path="pos" element={<PointDeVente />} />
       </Route>
     </Routes>
   );

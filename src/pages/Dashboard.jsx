@@ -1,21 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { 
   FaUsers, FaCalendarCheck, FaMoneyBillWave, FaBed, 
   FaStethoscope, FaPills, FaFileInvoice, FaChartLine,
-  FaUserMd, FaClock, FaHospitalUser, FaHandHoldingUsd
+  FaUserMd, FaClock, FaHospitalUser, FaHandHoldingUsd,
+  FaCheckCircle, FaSearch, FaShoppingCart
 } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 import api from '../services/api';
+import OrdonnanceForm from '../pages/Consultations/OrdonnanceForm';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const [isOrdonnanceOpen, setIsOrdonnanceOpen] = useState(false);
 
-  // Requêtes API selon le rôle
+  // Requêtes API - TOUJOURS appelées dans le même ordre
   const { data: patientsData } = useQuery({
     queryKey: ['dashboard-patients'],
     queryFn: () => api.get('/patients'),
-    enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN'
+    enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.role === 'RECEPTIONNISTE'
   });
 
   const { data: rdvsData } = useQuery({
@@ -42,12 +46,23 @@ const Dashboard = () => {
     enabled: user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN'
   });
 
+  // Requête pour les statistiques du caissier
+  const { data: caissierStats } = useQuery({
+    queryKey: ['caissier-stats'],
+    queryFn: async () => {
+      const response = await api.get('/pos/caissier-stats');
+      return response.data;
+    },
+    enabled: user?.role === 'CAISSIER'
+  });
+
   // Extraction sécurisée des données
   const patients = patientsData?.data?.data || patientsData?.data || [];
   const rdvs = rdvsData?.data?.data || rdvsData?.data || [];
   const stats = statsData?.data?.statistiques || {};
   const chambres = chambresData?.data?.global || {};
   const produitsCritiques = produitsData?.data?.data || produitsData?.data || [];
+  const caissierStatsData = caissierStats?.data || {};
 
   const getRoleTitle = () => {
     const titles = {
@@ -172,12 +187,14 @@ const Dashboard = () => {
       return new Date(rdv.date_rdv).toDateString() === today;
     });
     const rdvsWaiting = rdvs.filter(rdv => rdv.statut === 'EN_ATTENTE');
+    const rdvsConfirmed = rdvs.filter(rdv => rdv.statut === 'CONFIRME');
+    const rdvsTermined = rdvs.filter(rdv => rdv.statut === 'TERMINE');
 
     const statsCards = [
       { title: 'Rendez-vous aujourd\'hui', value: rdvsToday.length, icon: FaCalendarCheck, color: 'bg-blue-500' },
       { title: 'En attente', value: rdvsWaiting.length, icon: FaClock, color: 'bg-yellow-500' },
-      { title: 'Patients suivis', value: patients.length, icon: FaUsers, color: 'bg-green-500' },
-      { title: 'Consultations', value: '--', icon: FaStethoscope, color: 'bg-purple-500' },
+      { title: 'Confirmés', value: rdvsConfirmed.length, icon: FaCheckCircle, color: 'bg-green-500' },
+      { title: 'Consultations', value: rdvsTermined.length, icon: FaStethoscope, color: 'bg-purple-500' },
     ];
 
     return (
@@ -219,12 +236,15 @@ const Dashboard = () => {
                   <div>
                     <p className="font-medium">{rdv.patient_nom} {rdv.patient_prenom}</p>
                     <p className="text-sm text-gray-500">Motif: {rdv.motif || 'Non spécifié'}</p>
+                    <p className="text-xs text-gray-400">Statut: {rdv.statut}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-blue-600">{new Date(rdv.date_rdv).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
-                    <button className="mt-1 px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
-                      Démarrer consultation
-                    </button>
+                    {rdv.statut === 'EN_ATTENTE' && (
+                      <button className="mt-1 px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+                        Confirmer
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -238,7 +258,7 @@ const Dashboard = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                 <span>Consultations cette semaine</span>
-                <span className="font-bold text-xl">--</span>
+                <span className="font-bold text-xl">{rdvsTermined.length}</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                 <span>Patients satisfaits</span>
@@ -254,18 +274,40 @@ const Dashboard = () => {
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">📝 Actions rapides</h2>
             <div className="space-y-3">
-              <button className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Prendre un rendez-vous
+              <button 
+                onClick={() => window.location.href = '/rendez-vous'}
+                className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <FaCalendarCheck className="w-5 h-5" />
+                <span>Prendre un rendez-vous</span>
               </button>
-              <button className="w-full p-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                Rédiger une ordonnance
+              <button 
+                onClick={() => setIsOrdonnanceOpen(true)}
+                className="w-full p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <FaStethoscope className="w-5 h-5" />
+                <span>Rédiger une ordonnance</span>
               </button>
-              <button className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                Consulter les dossiers
+              <button 
+                onClick={() => window.location.href = '/patients'}
+                className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <FaUsers className="w-5 h-5" />
+                <span>Consulter les dossiers</span>
               </button>
             </div>
           </div>
         </div>
+
+        {isOrdonnanceOpen && (
+          <OrdonnanceForm
+            onClose={() => setIsOrdonnanceOpen(false)}
+            onSuccess={() => {
+              setIsOrdonnanceOpen(false);
+              toast.success('Ordonnance créée avec succès');
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -274,13 +316,36 @@ const Dashboard = () => {
   // DASHBOARD CAISSIER
   // ============================================
   if (user?.role === 'CAISSIER') {
-    const paiementsMois = statsData?.data?.paiements_par_mois || [];
+    const caissierStats = caissierStatsData?.statistiques || {};
+    const paiementsMois = caissierStatsData?.paiements_par_mois || [];
+    const facturesImpayees = caissierStatsData?.factures_impayees || [];
+    const dernieresVentes = caissierStatsData?.dernieres_ventes || [];
 
     const statsCards = [
-      { title: 'Total factures', value: stats.total_factures || 0, icon: FaFileInvoice, color: 'bg-blue-500' },
-      { title: 'Montant total', value: `${(stats.montant_total || 0).toLocaleString()} FCFA`, icon: FaMoneyBillWave, color: 'bg-green-500' },
-      { title: 'Montant perçu', value: `${(stats.montant_percu || 0).toLocaleString()} FCFA`, icon: FaHandHoldingUsd, color: 'bg-yellow-500' },
-      { title: 'Impayés', value: `${(stats.montant_impaye || 0).toLocaleString()} FCFA`, icon: FaChartLine, color: 'bg-red-500' },
+      { 
+        title: 'Total factures', 
+        value: caissierStats.total_factures || 0, 
+        icon: FaFileInvoice, 
+        color: 'bg-blue-500' 
+      },
+      { 
+        title: 'Montant total', 
+        value: `${(caissierStats.montant_total || 0).toLocaleString()} FCFA`, 
+        icon: FaMoneyBillWave, 
+        color: 'bg-green-500' 
+      },
+      { 
+        title: 'Montant perçu', 
+        value: `${(caissierStats.montant_percu || 0).toLocaleString()} FCFA`, 
+        icon: FaHandHoldingUsd, 
+        color: 'bg-yellow-500' 
+      },
+      { 
+        title: 'Impayés', 
+        value: `${(caissierStats.montant_impaye || 0).toLocaleString()} FCFA`, 
+        icon: FaChartLine, 
+        color: 'bg-red-500' 
+      },
     ];
 
     return (
@@ -320,7 +385,7 @@ const Dashboard = () => {
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
                           className="bg-green-600 rounded-full h-2"
-                          style={{ width: `${Math.min(100, (mois.total / (stats.montant_total || 1)) * 100)}%` }}
+                          style={{ width: `${Math.min(100, (mois.total / (caissierStats.montant_total || 1)) * 100)}%` }}
                         ></div>
                       </div>
                     </div>
@@ -336,14 +401,26 @@ const Dashboard = () => {
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">⚡ Actions rapides</h2>
             <div className="space-y-3">
-              <button className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                Créer une facture
+              <button 
+                onClick={() => window.location.href = '/pos'}
+                className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <FaShoppingCart className="w-5 h-5" />
+                <span>Point de Vente</span>
               </button>
-              <button className="w-full p-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                Enregistrer un paiement
+              <button 
+                onClick={() => window.location.href = '/factures'}
+                className="w-full p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <FaFileInvoice className="w-5 h-5" />
+                <span>Gérer les factures</span>
               </button>
-              <button className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                Rechercher une facture
+              <button 
+                onClick={() => window.location.href = '/factures'}
+                className="w-full p-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <FaSearch className="w-5 h-5" />
+                <span>Rechercher une facture</span>
               </button>
             </div>
           </div>
@@ -354,7 +431,79 @@ const Dashboard = () => {
             <FaFileInvoice className="mr-2 text-red-600" />
             Factures impayées récentes
           </h2>
-          <p className="text-gray-500 text-center py-4">Aucune facture impayée en attente</p>
+          {facturesImpayees.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">✅ Aucune facture impayée en attente</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">N°</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Payé</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Reste</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {facturesImpayees.map((facture) => (
+                    <tr key={facture.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm">#FAC-{facture.id}</td>
+                      <td className="px-4 py-2 text-sm">{facture.patient_nom} {facture.patient_prenom}</td>
+                      <td className="px-4 py-2 text-sm">{new Date(facture.date_facture).toLocaleDateString('fr-FR')}</td>
+                      <td className="px-4 py-2 text-sm text-right">{facture.montant_total.toLocaleString()} FCFA</td>
+                      <td className="px-4 py-2 text-sm text-right text-green-600">{facture.montant_paye?.toLocaleString() || 0} FCFA</td>
+                      <td className="px-4 py-2 text-sm text-right text-red-600 font-medium">{facture.solde_restant.toLocaleString()} FCFA</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4 flex items-center">
+            <FaShoppingCart className="mr-2 text-blue-600" />
+            Dernières ventes
+          </h2>
+          {dernieresVentes.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">Aucune vente enregistrée</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">N°</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Montant</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Payé</th>
+                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {dernieresVentes.map((vente) => (
+                    <tr key={vente.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 text-sm">#FAC-{vente.id}</td>
+                      <td className="px-4 py-2 text-sm">{vente.patient_nom} {vente.patient_prenom}</td>
+                      <td className="px-4 py-2 text-sm">{new Date(vente.date_facture).toLocaleDateString('fr-FR')}</td>
+                      <td className="px-4 py-2 text-sm text-right">{vente.montant_total.toLocaleString()} FCFA</td>
+                      <td className="px-4 py-2 text-sm text-right text-green-600">{vente.montant_paye?.toLocaleString() || 0} FCFA</td>
+                      <td className="px-4 py-2 text-sm text-center">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          vente.montant_paye >= vente.montant_total ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {vente.montant_paye >= vente.montant_total ? 'Payée' : 'Partielle'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -430,17 +579,26 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg cursor-pointer">
+          <div 
+            onClick={() => window.location.href = '/patients'}
+            className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg cursor-pointer transition-all hover:scale-105"
+          >
             <FaUserMd className="w-12 h-12 text-blue-600 mx-auto mb-3" />
             <h3 className="font-semibold">Nouveau patient</h3>
             <p className="text-sm text-gray-500">Enregistrer un patient</p>
           </div>
-          <div className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg cursor-pointer">
+          <div 
+            onClick={() => window.location.href = '/rendez-vous'}
+            className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg cursor-pointer transition-all hover:scale-105"
+          >
             <FaCalendarCheck className="w-12 h-12 text-green-600 mx-auto mb-3" />
             <h3 className="font-semibold">Prendre RDV</h3>
             <p className="text-sm text-gray-500">Planifier consultation</p>
           </div>
-          <div className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg cursor-pointer">
+          <div 
+            onClick={() => window.location.href = '/chambres'}
+            className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg cursor-pointer transition-all hover:scale-105"
+          >
             <FaBed className="w-12 h-12 text-purple-600 mx-auto mb-3" />
             <h3 className="font-semibold">Hospitalisation</h3>
             <p className="text-sm text-gray-500">Attribuer une chambre</p>
@@ -450,7 +608,7 @@ const Dashboard = () => {
     );
   }
 
-  // Fallback
+  // Fallback - Chargement
   return (
     <div className="flex items-center justify-center h-96">
       <div className="text-center">

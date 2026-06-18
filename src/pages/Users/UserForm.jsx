@@ -11,7 +11,9 @@ const UserForm = ({ user, mode, onClose, onSuccess }) => {
     mot_de_passe: '',
     confirm_password: '',
     role: 'RECEPTIONNISTE',
-    statut: 'ACTIF'
+    statut: 'ACTIF',
+    specialite: '',
+    telephone: ''
   });
 
   useEffect(() => {
@@ -22,7 +24,9 @@ const UserForm = ({ user, mode, onClose, onSuccess }) => {
         mot_de_passe: '',
         confirm_password: '',
         role: user.role || 'RECEPTIONNISTE',
-        statut: user.statut || 'ACTIF'
+        statut: user.statut || 'ACTIF',
+        specialite: user.specialite || '',
+        telephone: user.telephone || ''
       });
     }
   }, [user, mode]);
@@ -164,6 +168,52 @@ const UserForm = ({ user, mode, onClose, onSuccess }) => {
                 'Accueil et rendez-vous'}
             </p>
           </div>
+
+          {/* Champs spécifiques aux médecins */}
+          {formData.role === 'MEDECIN' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Spécialité *
+                </label>
+                <select
+                  name="specialite"
+                  value={formData.specialite}
+                  onChange={handleChange}
+                  className="input-field"
+                  required
+                >
+                  <option value="Généraliste">Généraliste</option>
+                  <option value="Cardiologie">Cardiologie</option>
+                  <option value="Pédiatrie">Pédiatrie</option>
+                  <option value="Gynécologie">Gynécologie</option>
+                  <option value="Neurologie">Neurologie</option>
+                  <option value="Dermatologie">Dermatologie</option>
+                  <option value="Ophtalmologie">Ophtalmologie</option>
+                  <option value="ORL">ORL</option>
+                  <option value="Orthopédie">Orthopédie</option>
+                  <option value="Psychiatrie">Psychiatrie</option>
+                  <option value="Urologie">Urologie</option>
+                  <option value="Radiologie">Radiologie</option>
+                  <option value="Anesthésie">Anesthésie</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Téléphone
+                </label>
+                <input
+                  type="tel"
+                  name="telephone"
+                  value={formData.telephone}
+                  onChange={handleChange}
+                  className="input-field"
+                  placeholder="+225 XX XX XX XX"
+                />
+              </div>
+            </>
+          )}
 
           {mode === 'create' && (
             <>

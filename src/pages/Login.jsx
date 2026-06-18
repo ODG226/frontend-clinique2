@@ -42,7 +42,7 @@ const Login = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full mb-4">
             <FaHospitalUser className="w-10 h-10 text-blue-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800">Clinique+</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Clinique KoudAmi</h1>
           <p className="text-gray-500 mt-2">Système de gestion de clinique</p>
         </div>
 
@@ -91,7 +91,7 @@ const Login = () => {
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>© 2024 Clinique+ - Tous droits réservés</p>
+          <p>© 2026 Clinique KoudAmi - Tous droits réservés</p>
         </div>
       </div>
     </div>

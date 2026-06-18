@@ -1,5 +1,6 @@
 import React from 'react';
-import { FaTimes, FaCalendarAlt, FaClock, FaUserMd, FaStethoscope, FaNotesMedical } from 'react-icons/fa';
+import { FaTimes, FaCalendarAlt, FaUserMd, FaStethoscope, FaNotesMedical } from 'react-icons/fa';
+// FaClock a été supprimé car non utilisé
 
 const RendezVousDetails = ({ rdv, onClose }) => {
   const getStatusBadge = (statut) => {
@@ -36,9 +37,6 @@ const RendezVousDetails = ({ rdv, onClose }) => {
               <h3 className="text-lg font-semibold text-gray-800">
                 Rendez-vous #{rdv.id}
               </h3>
-              <p className="text-sm text-gray-500">
-                Créé le {new Date(rdv.created_at || new Date()).toLocaleDateString('fr-FR')}
-              </p>
             </div>
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${status.color}`}>
               {status.label}

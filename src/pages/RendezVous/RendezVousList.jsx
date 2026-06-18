@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  FaPlus, FaEdit, FaTrash, FaEye, FaSearch, 
-  FaCalendarAlt, FaCheck, FaTimes, FaClock, FaUserMd 
+  FaPlus, FaTrash, FaEye, FaSearch, 
+  FaCalendarAlt, FaClock, FaUserMd 
 } from 'react-icons/fa';
+// FaEdit et FaCheck supprimés car non utilisés
 import toast from 'react-hot-toast';
 import rdvService from '../../services/rdvService';
 import patientService from '../../services/patientService';
@@ -38,10 +39,12 @@ const RendezVousList = () => {
   });
 
   // Récupérer les médecins pour le formulaire
-  const { data: medecins } = useQuery({
+  const { data: medecinsData } = useQuery({
     queryKey: ['medecins'],
     queryFn: () => medecinService.getAllMedecins()
   });
+
+  const medecins = medecinsData?.data || [];
 
   // Mutation pour supprimer un rendez-vous
   const deleteMutation = useMutation({
@@ -288,7 +291,6 @@ const RendezVousList = () => {
       {isFormOpen && (
         <RendezVousForm
           patients={patients?.data || []}
-          medecins={medecins?.data || []}
           onClose={() => setIsFormOpen(false)}
           onSuccess={handleFormSuccess}
         />

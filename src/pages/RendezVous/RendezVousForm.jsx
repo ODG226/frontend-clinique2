@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaTimes, FaSave } from 'react-icons/fa';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import rdvService from '../../services/rdvService';
+import medecinService from '../../services/medecinService';
 
-const RendezVousForm = ({ patients, medecins, onClose, onSuccess }) => {
+const RendezVousForm = ({ patients, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     patient_id: '',
     medecin_id: '',
@@ -13,9 +14,26 @@ const RendezVousForm = ({ patients, medecins, onClose, onSuccess }) => {
     motif: ''
   });
 
+  // Récupérer les médecins depuis l'API
+  const { data: medecinsData, isLoading: medecinsLoading, error: medecinsError } = useQuery({
+    queryKey: ['medecins-list'],
+    queryFn: () => medecinService.getAllMedecins()
+  });
+
+  // Log pour déboguer
+  useEffect(() => {
+    console.log('🔍 Données médecins brutes:', medecinsData);
+    console.log('🔍 Médecins extraits:', medecinsData?.data);
+    if (medecinsError) {
+      console.error('❌ Erreur chargement médecins:', medecinsError);
+    }
+  }, [medecinsData, medecinsError]);
+
+  const medecins = medecinsData?.data || [];
+  console.log('📋 Nombre de médecins:', medecins.length);
+
   const mutation = useMutation({
     mutationFn: (data) => {
-      // Combiner date et heure
       const dateTime = `${data.date_rdv}T${data.heure_rdv}:00`;
       return rdvService.createRendezVous({
         patient_id: data.patient_id,
@@ -52,8 +70,8 @@ const RendezVousForm = ({ patients, medecins, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
-        <div className="border-b px-6 py-4 flex justify-between items-center">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">
             Nouveau Rendez-vous
           </h2>
@@ -79,9 +97,9 @@ const RendezVousForm = ({ patients, medecins, onClose, onSuccess }) => {
                 required
               >
                 <option value="">Sélectionner un patient</option>
-                {patients.map((patient) => (
+                {patients && patients.map((patient) => (
                   <option key={patient.id} value={patient.id}>
-                    {patient.nom} {patient.prenom} ({patient.telephone || 'pas de téléphone'})
+                    {patient.nom} {patient.prenom} {patient.telephone ? `(${patient.telephone})` : ''}
                   </option>
                 ))}
               </select>
@@ -99,12 +117,23 @@ const RendezVousForm = ({ patients, medecins, onClose, onSuccess }) => {
                 required
               >
                 <option value="">Sélectionner un médecin</option>
-                {medecins.map((medecin) => (
-                  <option key={medecin.id} value={medecin.id}>
-                    Dr. {medecin.utilisateur_nom} - {medecin.specialite}
-                  </option>
-                ))}
+                {medecinsLoading ? (
+                  <option value="" disabled>⏳ Chargement des médecins...</option>
+                ) : medecins.length === 0 ? (
+                  <option value="" disabled>⚠️ Aucun médecin disponible</option>
+                ) : (
+                  medecins.map((medecin) => (
+                    <option key={medecin.id} value={medecin.id}>
+                      Dr. {medecin.utilisateur_nom || medecin.nom || 'Inconnu'} - {medecin.specialite || 'Généraliste'}
+                    </option>
+                  ))
+                )}
               </select>
+              {medecins.length === 0 && !medecinsLoading && (
+                <p className="text-xs text-red-500 mt-1">
+                  ⚠️ Aucun médecin trouvé. Veuillez contacter l'administrateur.
+                </p>
+              )}
             </div>
 
             <div>
@@ -161,7 +190,7 @@ const RendezVousForm = ({ patients, medecins, onClose, onSuccess }) => {
             </button>
             <button
               type="submit"
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || medecinsLoading}
               className="btn-primary flex items-center space-x-2 disabled:opacity-50"
             >
               <FaSave className="w-4 h-4" />
